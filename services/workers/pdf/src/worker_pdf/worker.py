@@ -22,7 +22,7 @@ from typing import Any
 
 from .chunker import chunk_markdown
 from .config import Config, load_config
-from .extractor import DoclingExtractor, ExtractedDocument, PdfExtractor
+from .extractor import ExtractedDocument, PdfExtractor, PymupdfExtractor
 from .fetcher import FetchError, fetch_pdf
 from .mcp_client import McpClient, McpError
 from .queue import QueueClient
@@ -118,7 +118,7 @@ async def process_one(
 async def run(config: Config) -> None:
     mcp = McpClient(config.brain_url)
     queue = QueueClient(config.redis_url, config.queue)
-    extractor = DoclingExtractor()
+    extractor = PymupdfExtractor()
 
     stop = asyncio.Event()
     loop = asyncio.get_running_loop()

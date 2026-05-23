@@ -147,6 +147,32 @@ services:
         condition: service_healthy
     restart: unless-stopped
 
+  # ────────────────────────────────────────────────────────────
+  # Optional module: pdf ingestion worker (Phase 12.c)
+  # ────────────────────────────────────────────────────────────
+  worker-pdf:
+    build:
+      context: ./services/workers/pdf
+      dockerfile: Dockerfile
+    container_name: openbrain-worker-pdf
+    profiles: [pdf]
+    environment:
+      MODULE_WORKERS_PDF_ENABLED: ${MODULE_WORKERS_PDF_ENABLED:-false}
+      BRAIN_URL: ${BRAIN_URL:-http://mcp-server:8080/mcp?key=${BRAIN_KEY:-}}
+      REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
+      WORKER_QUEUE:                ${WORKER_QUEUE_PDF:-ingest:pdf}
+      WORKER_MAX_PDF_BYTES:        ${WORKER_MAX_PDF_BYTES:-20971520}
+      WORKER_MAX_CHUNK_TOKENS:     ${WORKER_MAX_CHUNK_TOKENS:-800}
+      WORKER_CHUNK_OVERLAP_TOKENS: ${WORKER_CHUNK_OVERLAP_TOKENS:-120}
+    volumes:
+      - ./config/features.yaml:/app/config/features.yaml:ro
+    depends_on:
+      mcp-server:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
 volumes:
   pg_data:
     name: openbrain_pg_data

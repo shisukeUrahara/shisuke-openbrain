@@ -1,13 +1,10 @@
 FROM python:3.12-slim AS base
 
-# Docling needs libgomp1 + a few image-processing libs to install
-# cleanly. ca-certificates lets httpx verify TLS.
+# pymupdf ships a self-contained C extension so we do not need
+# libgomp / libgl / libglib like the Docling variant did. Only
+# ca-certificates for httpx TLS.
 RUN apt-get update \
- && apt-get install -y --no-install-recommends \
-      ca-certificates \
-      libgomp1 \
-      libgl1 \
-      libglib2.0-0 \
+ && apt-get install -y --no-install-recommends ca-certificates \
  && rm -rf /var/lib/apt/lists/* \
  && pip install --no-cache-dir uv
 
@@ -17,10 +14,6 @@ COPY pyproject.toml README.md ./
 COPY src ./src
 RUN uv pip install --system --no-cache .
 
-# Docling caches its layout/OCR models under ~/.cache/docling.
-# Operators mount a named volume at this path so models survive
-# container restarts.
-ENV HOME=/root
-VOLUME ["/root/.cache/docling"]
+# No persistent cache to mount — pymupdf has no model downloads.
 
 CMD ["python", "-m", "worker_pdf.worker"]

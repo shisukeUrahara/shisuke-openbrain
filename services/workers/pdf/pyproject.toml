@@ -10,7 +10,12 @@ description = "PDF ingestion worker for the self-hosted Open Brain"
 readme = "README.md"
 
 dependencies = [
-  "docling>=2.0",
+  # pymupdf gives us text-layer extraction with layout preservation
+  # at ~5MB instead of Docling's ~3GB PyTorch+transformers footprint.
+  # Trade-off: scanned PDFs (no text layer) get skipped via the
+  # "extract too short" fallthrough. For those, pre-OCR with
+  # ocrmypdf or swap back to Docling.
+  "pymupdf>=1.24",
   "httpx>=0.27",
   "redis>=5.0",
   "python-dotenv>=1.0",
