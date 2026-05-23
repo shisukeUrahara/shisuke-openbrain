@@ -54,33 +54,41 @@ setup() {
   [ "$output" = "401" ]
 }
 
-@test "POST /mcp with header key — tools/list returns 4 core tools" {
+@test "POST /mcp with header key — tools/list returns >= 4 tools" {
+  # Phase 2 contract: the four core tools always register. Optional
+  # modules may add more — assert that the count is at least 4, not
+  # exactly 4. Exact-count assertions live in the per-module suites.
   run bash -c "curl -s -X POST '$URL/mcp' \
     -H 'x-brain-key: $BRAIN_KEY' \
     -H 'Content-Type: application/json' -H 'Accept: application/json' \
     -d '{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"tools/list\",\"params\":{}}' \
     | jq -r '.result.tools | length'"
   [ "$status" -eq 0 ]
-  [ "$output" = "4" ]
+  [ "$output" -ge 4 ]
 }
 
-@test "POST /mcp with query key — tools/list returns 4 core tools" {
+@test "POST /mcp with query key — tools/list returns >= 4 tools" {
   run bash -c "curl -s -X POST '$URL/mcp?key=$BRAIN_KEY' \
     -H 'Content-Type: application/json' -H 'Accept: application/json' \
     -d '{\"jsonrpc\":\"2.0\",\"id\":2,\"method\":\"tools/list\",\"params\":{}}' \
     | jq -r '.result.tools | length'"
   [ "$status" -eq 0 ]
-  [ "$output" = "4" ]
+  [ "$output" -ge 4 ]
 }
 
-@test "tools/list includes the expected tool names" {
+@test "tools/list includes the 4 core tool names" {
+  # Assert presence of the four core tools regardless of how many
+  # optional modules are enabled around them.
   run bash -c "curl -s -X POST '$URL/mcp' \
     -H 'x-brain-key: $BRAIN_KEY' \
     -H 'Content-Type: application/json' -H 'Accept: application/json' \
     -d '{\"jsonrpc\":\"2.0\",\"id\":3,\"method\":\"tools/list\",\"params\":{}}' \
-    | jq -r '.result.tools[].name' | sort | tr '\n' ' '"
+    | jq -r '.result.tools[].name'"
   [ "$status" -eq 0 ]
-  [ "$output" = "browse capture search stats " ]
+  [[ "$output" == *"browse"* ]]
+  [[ "$output" == *"capture"* ]]
+  [[ "$output" == *"search"* ]]
+  [[ "$output" == *"stats"* ]]
 }
 
 @test "browse tool round-trip — returns a list (possibly empty)" {
