@@ -1,0 +1,44 @@
+# docker-compose.yml — local dev stack
+#
+# Phase 1: postgres only (core).
+# Phase 2+ will add the mcp-server service.
+# Optional modules attach via profiles (telegram, article, pdf, audio,
+# image, obsidian, n8n). Start core only:
+#
+#   docker compose up -d
+#
+# Start core + a module:
+#
+#   docker compose --profile telegram up -d
+#
+# Reset everything (DESTRUCTIVE — wipes pg_data volume):
+#
+#   docker compose down -v
+
+services:
+  postgres:
+    image: pgvector/pgvector:pg17
+    container_name: openbrain-postgres
+    environment:
+      POSTGRES_USER:     ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-devpass}
+      POSTGRES_DB:       ${POSTGRES_DB:-openbrain}
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+      # Postgres auto-runs *.sql files in this directory on first init.
+      # If you change SQL after the volume exists, `docker compose down -v`
+      # is required to re-trigger init.
+      - ./sql:/docker-entrypoint-initdb.d:ro
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    healthcheck:
+      test:     ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-openbrain}"]
+      interval: 5s
+      timeout:  3s
+      retries:  10
+      start_period: 5s
+    restart: unless-stopped
+
+volumes:
+  pg_data:
+    name: openbrain_pg_data
