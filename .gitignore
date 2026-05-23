@@ -7,6 +7,8 @@ supabase/
 .local/
 .agent/
 .claude.json
+plan/
+modified_plan.md
 
 # Python caches
 __pycache__/
