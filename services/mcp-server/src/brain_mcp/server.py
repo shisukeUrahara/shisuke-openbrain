@@ -69,7 +69,12 @@ def build_app(config: Config | None = None) -> Starlette:
     """
     config = config or load_config()
     mcp = build_mcp(config)
-    app = mcp.http_app()
+    # stateless_http=True: avoid the streamable-HTTP session handshake
+    #   so any one-shot JSON-RPC request (curl, basic clients, smoke
+    #   tests) works without a separate initialize round-trip.
+    # json_response=True: return plain JSON instead of an SSE stream,
+    #   which matches what most non-MCP-aware HTTP clients expect.
+    app = mcp.http_app(stateless_http=True, json_response=True)
 
     register_health(app, config)
 

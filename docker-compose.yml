@@ -39,6 +39,44 @@ services:
       start_period: 5s
     restart: unless-stopped
 
+  mcp-server:
+    build:
+      context: ./services/mcp-server
+      dockerfile: Dockerfile
+    container_name: openbrain-mcp-server
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-devpass}@postgres:5432/${POSTGRES_DB:-openbrain}
+      BRAIN_KEY: ${BRAIN_KEY:?BRAIN_KEY must be set in .env}
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
+      EMBED_PROVIDER: ${EMBED_PROVIDER:-openrouter}
+      OLLAMA_URL: ${OLLAMA_URL:-http://ollama:11434}
+      # Module flags propagated through. Default false.
+      MODULE_DOCUMENTS_ENABLED:      ${MODULE_DOCUMENTS_ENABLED:-false}
+      MODULE_TELEGRAM_BOT_ENABLED:   ${MODULE_TELEGRAM_BOT_ENABLED:-false}
+      MODULE_WORKERS_ARTICLE_ENABLED: ${MODULE_WORKERS_ARTICLE_ENABLED:-false}
+      MODULE_WORKERS_PDF_ENABLED:     ${MODULE_WORKERS_PDF_ENABLED:-false}
+      MODULE_WORKERS_AUDIO_ENABLED:   ${MODULE_WORKERS_AUDIO_ENABLED:-false}
+      MODULE_WORKERS_IMAGE_ENABLED:   ${MODULE_WORKERS_IMAGE_ENABLED:-false}
+      MODULE_OBSIDIAN_MIRROR_ENABLED: ${MODULE_OBSIDIAN_MIRROR_ENABLED:-false}
+      MODULE_N8N_SCHEDULER_ENABLED:   ${MODULE_N8N_SCHEDULER_ENABLED:-false}
+      MODULE_GRAPHIFY_ENABLED:        ${MODULE_GRAPHIFY_ENABLED:-false}
+    volumes:
+      # Mount features.yaml read-only so module-flag changes outside
+      # env vars also take effect on the next container restart.
+      - ./config/features.yaml:/app/config/features.yaml:ro
+    ports:
+      - "${MCP_PORT:-8080}:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test:     ["CMD", "curl", "-fsS", "http://localhost:8080/health"]
+      interval: 10s
+      timeout:  3s
+      retries:  5
+      start_period: 10s
+    restart: unless-stopped
+
 volumes:
   pg_data:
     name: openbrain_pg_data
