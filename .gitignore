@@ -25,3 +25,13 @@ sync-log.json
 
 # Build artifacts
 deno.lock
+
+# Local docker volumes (defensive — named volumes live outside repo, but
+# binding to ./pg_data is a common dev shortcut and we never want it
+# committed)
+pg_data/
+.venv/
+.pytest_cache/
+*.egg-info/
+htmlcov/
+.coverage
