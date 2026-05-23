@@ -46,8 +46,9 @@ done
 
 echo "── phase 1: SQL header conventions ──"
 for f in sql/00*.sql; do
-  check "head -5 '$f' | grep -q '^-- Idempotent: yes'"   "$(basename $f) declares idempotency"
-  check "head -5 '$f' | grep -q '^-- Phase:'"            "$(basename $f) declares phase"
+  # Header spans up to ~15 lines because Purpose lines wrap.
+  check "head -15 '$f' | grep -q '^-- Idempotent: yes'"  "$(basename $f) declares idempotency"
+  check "head -15 '$f' | grep -q '^-- Phase:'"           "$(basename $f) declares phase"
 done
 
 echo "── phase 1: forbidden SQL patterns absent ──"
