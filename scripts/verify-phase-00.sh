@@ -50,7 +50,10 @@ check "grep -q '^DATABASE_URL=' .env.example"               "DATABASE_URL listed
 check "grep -q '^EMBED_PROVIDER=' .env.example"             "EMBED_PROVIDER listed in .env.example"
 
 echo "── phase 0: secret hygiene ──"
-check "! git log -p 2>/dev/null | grep -iE 'BRAIN_KEY=[a-f0-9]{32,}|OPENROUTER_API_KEY=sk-' >/dev/null" "no secrets in git history"
+# Strict patterns that won't match documentation placeholders like
+# sk-or-v1-your-key-here or BRAIN_KEY=<set-me>. Real keys are long
+# uninterrupted alphanumeric runs.
+check "! git log -p 2>/dev/null | grep -iE 'BRAIN_KEY=[a-f0-9]{40,}|OPENROUTER_API_KEY=sk-or-v1-[A-Za-z0-9]{40,}' >/dev/null" "no secrets in git history"
 
 echo
 if [ "$fail" -eq 0 ]; then
