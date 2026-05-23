@@ -173,6 +173,40 @@ services:
         condition: service_healthy
     restart: unless-stopped
 
+  # ────────────────────────────────────────────────────────────
+  # Optional module: audio + youtube ingestion worker (Phase 12.d)
+  # ────────────────────────────────────────────────────────────
+  worker-audio:
+    build:
+      context: ./services/workers/audio
+      dockerfile: Dockerfile
+    container_name: openbrain-worker-audio
+    profiles: [audio]
+    environment:
+      MODULE_WORKERS_AUDIO_ENABLED: ${MODULE_WORKERS_AUDIO_ENABLED:-false}
+      BRAIN_URL: ${BRAIN_URL:-http://mcp-server:8080/mcp?key=${BRAIN_KEY:-}}
+      REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
+      WORKER_QUEUE_VOICE:          ${WORKER_QUEUE_VOICE:-ingest:voice}
+      WORKER_QUEUE_YOUTUBE:        ${WORKER_QUEUE_YOUTUBE:-ingest:youtube}
+      WORKER_WHISPER_MODEL:        ${WORKER_WHISPER_MODEL:-small}
+      WORKER_WHISPER_COMPUTE_TYPE: ${WORKER_WHISPER_COMPUTE_TYPE:-int8}
+      WORKER_MAX_AUDIO_BYTES:      ${WORKER_MAX_AUDIO_BYTES:-209715200}
+      WORKER_MAX_CHUNK_TOKENS:     ${WORKER_MAX_CHUNK_TOKENS:-800}
+      WORKER_CHUNK_OVERLAP_TOKENS: ${WORKER_CHUNK_OVERLAP_TOKENS:-120}
+    volumes:
+      - ./config/features.yaml:/app/config/features.yaml:ro
+      # Persist whisper model weights so the ~250 MB download for
+      # the `small` model only happens once per host.
+      - whisper_models:/root/.cache/huggingface
+    depends_on:
+      mcp-server:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
 volumes:
   pg_data:
     name: openbrain_pg_data
+  whisper_models:
+    name: openbrain_whisper_models
