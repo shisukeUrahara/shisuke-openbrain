@@ -57,3 +57,15 @@ This repo also has a maintainer-local GSD layer in `.planning/`.
 - Start with `.planning/STATE.md`, then read `.planning/PROJECT.md`, `.planning/ROADMAP.md`, and the relevant `.planning/codebase/*.md` documents.
 - Keep `.planning/` local. It is gitignored intentionally and is not part of the public contribution contract or upstream PR scope.
 - Public contributor rules still come from `CLAUDE.md`, `AGENTS.md`, `CONTRIBUTING.md`, and the committed repo files.
+
+## Maintainer-Local Fork Layer
+
+This fork also runs a self-hosted divergence from upstream, with maintainer-local planning under `plan/` (gitignored). When working inside this fork:
+
+- **Source of truth for the fork:** `plan/PLANNED_PHASES.md` (phases) + `plan/IMPLEMENTATION_STRATEGY.md` (how to execute them) + `plan/DECISIONS.md` (choice log).
+- **Claude Code workspace:** `.claude/` — slash commands, subagents, rules, settings. Layout documented in `.claude/README.md`.
+- **Parallel sessions:** see `plan/WORKTREE_WORKFLOW.md` for the git-worktree pattern.
+- **Status display:** `.claude/settings.json` configures a statusline that shows the current branch and the active phase from `plan/PLANNED_PHASES.md`.
+- **Output style:** `Explanatory` by default so the agent explains *why* it made a change (useful while learning the stack).
+
+These maintainer-local artifacts MUST NOT be referenced from any upstream contribution (recipes, integrations, skills) — public contributions follow the upstream rules in this file above.
