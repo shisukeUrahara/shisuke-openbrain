@@ -31,6 +31,7 @@ Every contribution lives in its own subfolder under the right category and must 
 - **No binary blobs** over 1MB. No `.exe`, `.dmg`, `.zip`, `.tar.gz`.
 - **No `DROP TABLE`, `DROP DATABASE`, `TRUNCATE`, or unqualified `DELETE FROM`** in SQL files.
 - **MCP servers must be remote (Supabase Edge Functions), not local.** Never use `claude_desktop_config.json`, `StdioServerTransport`, or local Node.js servers. All extensions deploy as Edge Functions and connect via Claude Desktop's custom connectors UI (Settings → Connectors → Add custom connector → paste URL). See `docs/01-getting-started.md` Step 7 for the pattern.
+- **Never include a Claude model name in commit messages, PR titles, PR bodies, or `Co-Authored-By` lines.** No `claude-opus-4-7`, `Claude Opus 4.7`, `Sonnet`, `Haiku`, version numbers, or any other model identifier. If a `Co-Authored-By: Claude` trailer is used, write it as `Co-Authored-By: Claude <noreply@anthropic.com>` with no model suffix.
 
 ## PR Standards
 
