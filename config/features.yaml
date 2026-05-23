@@ -1,0 +1,45 @@
+# config/features.yaml
+# Canonical module registry. All modules default OFF.
+# Per-environment overrides go in .env via MODULE_<PATH>_ENABLED.
+# Resolution order: env wins over yaml.
+#
+# Reference: plan/PLANNED_PHASES.md Section A.4
+version: 1
+modules:
+  documents:
+    enabled: false
+    description: "documents + chunks schema and MCP tools for long-form content"
+    phase: 10
+  telegram_bot:
+    enabled: false
+    description: "Telegram capture bot for text + media forwarding"
+    phase: 11
+  workers:
+    article:
+      enabled: false
+      description: "Article ingestion via trafilatura + chunker"
+      phase: 12.b
+    pdf:
+      enabled: false
+      description: "PDF ingestion via Docling"
+      phase: 12.c
+    audio:
+      enabled: false
+      description: "Audio/YouTube transcription via faster-whisper"
+      phase: 12.d
+    image:
+      enabled: false
+      description: "Image OCR + description via Qwen-VL"
+      phase: 12.e
+  obsidian_mirror:
+    enabled: false
+    description: "Git-synced markdown vault mirror of documents table"
+    phase: 13
+  n8n_scheduler:
+    enabled: false
+    description: "n8n scheduled workflows for digests + syntheses"
+    phase: 14
+  graphify:
+    enabled: false
+    description: "Project-scope synthesis via graphify batch tool"
+    phase: 15
