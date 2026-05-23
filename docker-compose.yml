@@ -77,6 +77,51 @@ services:
       start_period: 10s
     restart: unless-stopped
 
+  # ────────────────────────────────────────────────────────────
+  # Optional module: redis queue (workers use this from Phase 12)
+  # ────────────────────────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: openbrain-redis
+    profiles: [telegram, article, pdf, audio, image]
+    command: ["redis-server", "--save", "", "--appendonly", "no"]
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    restart: unless-stopped
+
+  # ────────────────────────────────────────────────────────────
+  # Optional module: telegram capture bot
+  # ────────────────────────────────────────────────────────────
+  telegram-bot:
+    build:
+      context: ./services/telegram-bot
+      dockerfile: Dockerfile
+    container_name: openbrain-telegram-bot
+    profiles: [telegram]
+    environment:
+      MODULE_TELEGRAM_BOT_ENABLED: ${MODULE_TELEGRAM_BOT_ENABLED:-false}
+      TELEGRAM_BOT_TOKEN:          ${TELEGRAM_BOT_TOKEN:-}
+      TELEGRAM_OWNER_ID:           ${TELEGRAM_OWNER_ID:-}
+      # The bot calls the MCP server over the docker network; the
+      # service name `mcp-server` resolves to the running container.
+      # The full URL must include the ?key= because Telegram clients
+      # cannot set custom headers.
+      BRAIN_URL: ${BRAIN_URL:-http://mcp-server:8080/mcp?key=${BRAIN_KEY:-}}
+      REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
+    volumes:
+      - ./config/features.yaml:/app/config/features.yaml:ro
+    depends_on:
+      mcp-server:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
 volumes:
   pg_data:
     name: openbrain_pg_data
