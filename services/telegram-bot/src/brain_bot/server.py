@@ -150,6 +150,9 @@ def main() -> None:
         level=os.environ.get("LOG_LEVEL", "INFO"),
         format="%(asctime)s %(levelname)s %(name)s: %(message)s",
     )
+    # httpx logs the full request URL at INFO including any ?key=
+    # query parameter. Silence it so BRAIN_KEY never leaks to logs.
+    logging.getLogger("httpx").setLevel(logging.WARNING)
     config = load_config(require_runtime=False)
     if not config.enabled:
         logger.info(

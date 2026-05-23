@@ -122,6 +122,31 @@ services:
         condition: service_healthy
     restart: unless-stopped
 
+  # ────────────────────────────────────────────────────────────
+  # Optional module: article ingestion worker (Phase 12.b)
+  # ────────────────────────────────────────────────────────────
+  worker-article:
+    build:
+      context: ./services/workers/article
+      dockerfile: Dockerfile
+    container_name: openbrain-worker-article
+    profiles: [article]
+    environment:
+      MODULE_WORKERS_ARTICLE_ENABLED: ${MODULE_WORKERS_ARTICLE_ENABLED:-false}
+      BRAIN_URL: ${BRAIN_URL:-http://mcp-server:8080/mcp?key=${BRAIN_KEY:-}}
+      REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
+      WORKER_QUEUE:               ${WORKER_QUEUE_ARTICLE:-ingest:article}
+      WORKER_MAX_CHUNK_TOKENS:    ${WORKER_MAX_CHUNK_TOKENS:-800}
+      WORKER_CHUNK_OVERLAP_TOKENS: ${WORKER_CHUNK_OVERLAP_TOKENS:-120}
+    volumes:
+      - ./config/features.yaml:/app/config/features.yaml:ro
+    depends_on:
+      mcp-server:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
 volumes:
   pg_data:
     name: openbrain_pg_data

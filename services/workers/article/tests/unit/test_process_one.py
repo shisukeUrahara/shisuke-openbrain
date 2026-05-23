@@ -204,3 +204,37 @@ async def test_no_project_tag_when_absent():
         fetcher=_make_fetcher(article),
     )
     assert "project" not in mcp.captures[0]
+
+
+async def test_mcp_client_surfaces_iserror_payloads():
+    """The mcp_client should turn FastMCP's isError tool responses
+    into a clear McpError rather than complaining about an
+    'unexpected response shape'. The shape is well-defined — what is
+    unexpected is that the tool failed."""
+    import httpx
+
+    from worker_article.mcp_client import McpClient, McpError
+
+    transport = httpx.MockTransport(
+        lambda req: httpx.Response(
+            200,
+            json={
+                "jsonrpc": "2.0",
+                "id": 1,
+                "result": {
+                    "isError": True,
+                    "content": [
+                        {"type": "text", "text": "missing OPENROUTER_API_KEY"},
+                    ],
+                },
+            },
+        )
+    )
+    real_client = httpx.AsyncClient
+    async with real_client(transport=transport) as client:
+        mcp = McpClient("http://mcp/mcp", client=client)
+        with pytest.raises(McpError, match="missing OPENROUTER_API_KEY"):
+            await mcp.capture_document(
+                title="t", kind="article", content_md="x",
+                source="https://x", sha256="a" * 64,
+            )

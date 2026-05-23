@@ -93,9 +93,21 @@ class McpClient:
                 f"{name} failed: status={response.status_code} body={response.text}"
             )
         payload = response.json()
+        # JSON-RPC transport-level error.
         if "error" in payload:
             raise McpError(f"{name} returned error: {payload['error']}")
+        result = payload.get("result") or {}
+        # Tool-level error: FastMCP sets isError=true and puts the
+        # message under result.content[].text instead of
+        # structuredContent.
+        if result.get("isError"):
+            msg = "unknown tool error"
+            for item in result.get("content") or []:
+                if isinstance(item, dict) and item.get("type") == "text":
+                    msg = item.get("text", msg)
+                    break
+            raise McpError(f"{name} tool error: {msg}")
         try:
-            return payload["result"]["structuredContent"]
+            return result["structuredContent"]
         except (KeyError, TypeError) as exc:
             raise McpError(f"unexpected response shape from {name}: {payload!r}") from exc
