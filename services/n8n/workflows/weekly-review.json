@@ -1,0 +1,93 @@
+{
+  "name": "Open Brain — Weekly Review",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            { "field": "cronExpression", "expression": "0 8 * * 1" }
+          ]
+        }
+      },
+      "id": "schedule-weekly",
+      "name": "Every Monday at 08:00",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.BRAIN_URL }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Accept", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"jsonrpc\": \"2.0\",\n  \"id\": 1,\n  \"method\": \"tools/call\",\n  \"params\": {\n    \"name\": \"browse\",\n    \"arguments\": { \"since_days\": 7, \"limit\": 200 }\n  }\n}",
+        "options": {}
+      },
+      "id": "fetch-week",
+      "name": "Browse the week's thoughts",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [520, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://openrouter.ai/api/v1/chat/completions",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"openai/gpt-4o-mini\",\n  \"messages\": [\n    { \"role\": \"system\", \"content\": \"Synthesize the past week's captured thoughts into a one-page review: 5 themes, any unresolved threads, and 3 suggested focus areas for next week.\" },\n    { \"role\": \"user\", \"content\": {{ JSON.stringify(JSON.stringify($json)) }} }\n  ]\n}",
+        "options": {}
+      },
+      "id": "synthesize",
+      "name": "Synthesize via OpenRouter",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [800, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.BRAIN_URL }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Accept", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"jsonrpc\": \"2.0\",\n  \"id\": 2,\n  \"method\": \"tools/call\",\n  \"params\": {\n    \"name\": \"capture\",\n    \"arguments\": {\n      \"content\": {{ JSON.stringify($json.choices[0].message.content) }},\n      \"metadata\": { \"type\": \"weekly_review\", \"source\": \"n8n\", \"project\": \"meta\" }\n    }\n  }\n}",
+        "options": {}
+      },
+      "id": "capture-review",
+      "name": "Capture review back",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1080, 300]
+    }
+  ],
+  "connections": {
+    "Every Monday at 08:00": {
+      "main": [[{ "node": "Browse the week's thoughts", "type": "main", "index": 0 }]]
+    },
+    "Browse the week's thoughts": {
+      "main": [[{ "node": "Synthesize via OpenRouter", "type": "main", "index": 0 }]]
+    },
+    "Synthesize via OpenRouter": {
+      "main": [[{ "node": "Capture review back", "type": "main", "index": 0 }]]
+    }
+  },
+  "settings": { "executionOrder": "v1" },
+  "meta": {
+    "templateNote": "Open Brain weekly review. After import: set BRAIN_URL env, attach OpenRouter httpHeaderAuth credential, activate. The review captures itself back with metadata.type=weekly_review so it becomes searchable — the compounding loop."
+  }
+}

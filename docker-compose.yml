@@ -281,6 +281,51 @@ services:
       - vault:/vault
     restart: unless-stopped
 
+  # ────────────────────────────────────────────────────────────
+  # Optional module: n8n scheduler (Phase 14)
+  # ────────────────────────────────────────────────────────────
+  n8n:
+    image: n8nio/n8n:latest
+    container_name: openbrain-n8n
+    profiles: [n8n]
+    environment:
+      # n8n persists its workflows + credentials in the shared
+      # Postgres under a dedicated schema so it never collides with
+      # the brain's tables.
+      DB_TYPE: postgresdb
+      DB_POSTGRESDB_HOST: postgres
+      DB_POSTGRESDB_PORT: "5432"
+      DB_POSTGRESDB_DATABASE: ${POSTGRES_DB:-openbrain}
+      DB_POSTGRESDB_USER: ${POSTGRES_USER:-postgres}
+      DB_POSTGRESDB_PASSWORD: ${POSTGRES_PASSWORD:-devpass}
+      DB_POSTGRESDB_SCHEMA: n8n
+      # Encrypts stored credentials. MUST be stable across restarts
+      # or saved credentials become unreadable.
+      N8N_ENCRYPTION_KEY: ${N8N_ENCRYPTION_KEY:-change-me-openssl-rand-hex-32}
+      N8N_PORT: "5678"
+      N8N_HOST: ${N8N_HOST:-localhost}
+      N8N_PROTOCOL: ${N8N_PROTOCOL:-http}
+      # Editor UI basic auth (recommended even locally).
+      N8N_BASIC_AUTH_ACTIVE: ${N8N_BASIC_AUTH_ACTIVE:-true}
+      N8N_BASIC_AUTH_USER: ${N8N_BASIC_AUTH_USER:-admin}
+      N8N_BASIC_AUTH_PASSWORD: ${N8N_BASIC_AUTH_PASSWORD:-changeme}
+      # The brain URL workflows call. Includes ?key= because n8n's
+      # HTTP node sends it as-is.
+      BRAIN_URL: ${BRAIN_URL:-http://mcp-server:8080/mcp?key=${BRAIN_KEY:-}}
+      GENERIC_TIMEZONE: ${TZ:-UTC}
+    ports:
+      - "${N8N_PORT:-5678}:5678"
+    volumes:
+      - n8n_data:/home/node/.n8n
+      # Mount the workflow templates read-only so they can be
+      # imported from the editor's "Import from File" using the
+      # path /workflows/<name>.json.
+      - ./services/n8n/workflows:/workflows:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
 volumes:
   pg_data:
     name: openbrain_pg_data
@@ -288,3 +333,5 @@ volumes:
     name: openbrain_whisper_models
   vault:
     name: openbrain_vault
+  n8n_data:
+    name: openbrain_n8n_data
