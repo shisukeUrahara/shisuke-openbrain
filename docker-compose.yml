@@ -64,6 +64,10 @@ services:
       # Mount features.yaml read-only so module-flag changes outside
       # env vars also take effect on the next container restart.
       - ./config/features.yaml:/app/config/features.yaml:ro
+      # graphify (Phase 15) export target. The export_project_corpus
+      # tool writes here; the host + a graphify run read it back. A
+      # named volume keeps exports off the repo tree.
+      - exports:/exports
     ports:
       - "${MCP_PORT:-8080}:8080"
     depends_on:
@@ -335,3 +339,5 @@ volumes:
     name: openbrain_vault
   n8n_data:
     name: openbrain_n8n_data
+  exports:
+    name: openbrain_exports
