@@ -22,6 +22,7 @@ from fastmcp import FastMCP
 from starlette.applications import Starlette
 
 from .auth import BrainKeyAuth
+from .ratelimit import RateLimitMiddleware
 from .config import Config, load_config
 from .db import close_pool, init_pool
 from .health import register_health
@@ -110,7 +111,13 @@ def build_app(config: Config | None = None) -> Starlette:
                 yield
 
     app.router.lifespan_context = combined_lifespan
+    # add_middleware prepends, so the LAST add is the OUTERMOST layer.
+    # Auth first, then rate-limit on top: a flood is rejected with 429
+    # before we even check the key, so an unauthenticated attacker can't
+    # burn auth cycles. /health is allow-listed in both.
     app.add_middleware(BrainKeyAuth, brain_key=config.brain_key)
+    if config.rate_limit_enabled:
+        app.add_middleware(RateLimitMiddleware, per_min=config.rate_limit_per_min)
     return app
 
 

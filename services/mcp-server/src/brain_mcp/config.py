@@ -63,6 +63,8 @@ class Config:
     openrouter_api_key: str | None
     ollama_url: str
     modules: Modules
+    rate_limit_enabled: bool = True
+    rate_limit_per_min: int = 100
 
 
 # ──────────────────────────────────────────────────────────────────
@@ -178,4 +180,6 @@ def load_config(
         openrouter_api_key=os.environ.get("OPENROUTER_API_KEY"),
         ollama_url=os.environ.get("OLLAMA_URL", "http://ollama:11434"),
         modules=modules,
+        rate_limit_enabled=_env_bool("RATE_LIMIT_ENABLED", True),
+        rate_limit_per_min=int(os.environ.get("RATE_LIMIT_PER_MIN", "100")),
     )

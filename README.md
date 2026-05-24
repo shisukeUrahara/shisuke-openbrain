@@ -10,6 +10,8 @@ This isn't a notes app. It's a database with vector search and an open protocol 
 
 > Open Brain was created by [Nate B. Jones](https://natesnewsletter.substack.com/). Follow the [Substack](https://natesnewsletter.substack.com/) for updates, discussion, and the companion prompt pack. Join the [Discord](https://discord.gg/Cgh9WJEkeG) for real-time help and community.
 
+> **Self-hosted fork.** This fork runs Open Brain on **local Postgres + pgvector** with a **Python MCP server** (FastMCP) instead of Supabase Edge Functions, deployable to a VPS via Coolify. Capability modules (documents, ingestion workers, Obsidian mirror, n8n scheduler, graphify) are each toggled by a boolean flag and default off. Per-capability setup and deployment guides live in [`docs/`](docs/) (the `phase-*` go-live docs); the server, schema, and tests are under [`services/`](services/), [`sql/`](sql/), and [`tests/`](tests/).
+
 https://github.com/user-attachments/assets/80a79b09-f323-42c6-b11b-de10bb6fa36f
 
 ## Getting Started
