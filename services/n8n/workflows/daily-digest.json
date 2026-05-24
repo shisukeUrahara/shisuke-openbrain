@@ -1,0 +1,93 @@
+{
+  "name": "Open Brain — Daily Digest",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            { "field": "cronExpression", "expression": "0 22 * * *" }
+          ]
+        }
+      },
+      "id": "schedule-daily",
+      "name": "Every day at 22:00",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.BRAIN_URL }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Accept", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"jsonrpc\": \"2.0\",\n  \"id\": 1,\n  \"method\": \"tools/call\",\n  \"params\": {\n    \"name\": \"browse\",\n    \"arguments\": { \"since_days\": 1, \"limit\": 50 }\n  }\n}",
+        "options": {}
+      },
+      "id": "fetch-recent",
+      "name": "Browse today's thoughts",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [520, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://openrouter.ai/api/v1/chat/completions",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"openai/gpt-4o-mini\",\n  \"messages\": [\n    { \"role\": \"system\", \"content\": \"Summarize the day's captured thoughts into a 3-bullet digest. Call out any action items and any repeated themes.\" },\n    { \"role\": \"user\", \"content\": {{ JSON.stringify(JSON.stringify($json)) }} }\n  ]\n}",
+        "options": {}
+      },
+      "id": "summarize",
+      "name": "Summarize via OpenRouter",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [800, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.BRAIN_URL }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Accept", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"jsonrpc\": \"2.0\",\n  \"id\": 2,\n  \"method\": \"tools/call\",\n  \"params\": {\n    \"name\": \"capture\",\n    \"arguments\": {\n      \"content\": {{ JSON.stringify($json.choices[0].message.content) }},\n      \"metadata\": { \"type\": \"daily_digest\", \"source\": \"n8n\" }\n    }\n  }\n}",
+        "options": {}
+      },
+      "id": "capture-digest",
+      "name": "Capture digest back",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1080, 300]
+    }
+  ],
+  "connections": {
+    "Every day at 22:00": {
+      "main": [[{ "node": "Browse today's thoughts", "type": "main", "index": 0 }]]
+    },
+    "Browse today's thoughts": {
+      "main": [[{ "node": "Summarize via OpenRouter", "type": "main", "index": 0 }]]
+    },
+    "Summarize via OpenRouter": {
+      "main": [[{ "node": "Capture digest back", "type": "main", "index": 0 }]]
+    }
+  },
+  "settings": { "executionOrder": "v1" },
+  "meta": {
+    "templateNote": "Open Brain daily digest. After import: set BRAIN_URL env (full MCP url incl ?key=), attach an OpenRouter httpHeaderAuth credential (Authorization: Bearer sk-or-...), then activate. Optionally append a Telegram node to deliver the digest."
+  }
+}
