@@ -35,3 +35,8 @@ pg_data/
 *.egg-info/
 htmlcov/
 .coverage
+
+# Local DB dumps â never commit
+backups/
+*.sql.gz
+*.dump
