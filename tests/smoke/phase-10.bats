@@ -26,24 +26,28 @@ setup() {
   [ "$output" = "true" ]
 }
 
-@test "tools/list returns 7 tools (4 core + 3 documents)" {
+@test "tools/list returns at least 7 tools (4 core + 3 documents)" {
+  # >= 7, not == 7: other module flags (e.g. graphify) may add tools on
+  # top. The exact documents contract is asserted by name below.
   run bash -c "curl -s -X POST '$URL/mcp' \
     -H 'x-brain-key: $BRAIN_KEY' \
     -H 'Content-Type: application/json' -H 'Accept: application/json' \
     -d '{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"tools/list\",\"params\":{}}' \
     | jq -r '.result.tools | length'"
   [ "$status" -eq 0 ]
-  [ "$output" = "7" ]
+  [ "$output" -ge 7 ]
 }
 
-@test "tools/list includes capture_document, add_chunks, search_chunks" {
+@test "tools/list includes the 4 core + 3 documents tools" {
+  # Assert the 7 expected names are all present (subset check), so the
+  # suite tolerates additional module tools without going stale.
   run bash -c "curl -s -X POST '$URL/mcp' \
     -H 'x-brain-key: $BRAIN_KEY' \
     -H 'Content-Type: application/json' -H 'Accept: application/json' \
     -d '{\"jsonrpc\":\"2.0\",\"id\":2,\"method\":\"tools/list\",\"params\":{}}' \
-    | jq -r '.result.tools[].name' | sort | tr '\n' ' '"
+    | jq -r '[.result.tools[].name] as \$n | (([\"capture\",\"search\",\"browse\",\"stats\",\"capture_document\",\"add_chunks\",\"search_chunks\"] - \$n) | length)'"
   [ "$status" -eq 0 ]
-  [ "$output" = "add_chunks browse capture capture_document search search_chunks stats " ]
+  [ "$output" = "0" ]
 }
 
 @test "capture_document tool is callable (validation path)" {

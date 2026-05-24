@@ -56,6 +56,19 @@ def build_mcp(config: Config) -> FastMCP:
                 "are not present yet — skipping registration"
             )
 
+    if config.modules.graphify:
+        # Phase 15 — graphify synthesis. The export tool dumps a
+        # project slice to markdown for the on-demand graphify CLI.
+        try:
+            from .tools import graphify_export
+
+            graphify_export.register(mcp, config=config)
+        except ImportError:
+            logger.warning(
+                "MODULE_GRAPHIFY_ENABLED is true but tools/graphify_export.py "
+                "is not present yet — skipping registration"
+            )
+
     return mcp
 
 

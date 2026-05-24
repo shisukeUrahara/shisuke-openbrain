@@ -78,15 +78,20 @@ if docker compose ps mcp-server 2>/dev/null | grep -qE 'healthy|running'; then
     # Read the actual /health flag.
     flag=$(curl -s http://localhost:8080/health | jq -r '.modules.documents' 2>/dev/null)
     if [ "$flag" = "true" ]; then
-      count=$(curl -s -X POST "http://localhost:8080/mcp" \
+      # The documents flag adds 3 tools on top of the 4 core tools.
+      # Other module flags (e.g. graphify) may add more, so assert
+      # "at least 7 AND the 7 core+documents names are all present"
+      # rather than an exact count — the off-contract below stays exact.
+      names=$(curl -s -X POST "http://localhost:8080/mcp" \
         -H "x-brain-key: $BRAIN_KEY" \
         -H 'Content-Type: application/json' -H 'Accept: application/json' \
         -d '{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{}}' \
-        | jq -r '.result.tools | length')
-      if [ "$count" = "7" ]; then
-        printf "  \033[32m✓\033[0m flag ON: tools/list returns 7 tools\n"; pass=$((pass+1))
+        | jq -r '[.result.tools[].name] as $n
+                 | (["capture","search","browse","stats","capture_document","add_chunks","search_chunks"] - $n) | length')
+      if [ "$names" = "0" ]; then
+        printf "  \033[32m✓\033[0m flag ON: tools/list includes all 4 core + 3 documents tools\n"; pass=$((pass+1))
       else
-        printf "  \033[31m✗\033[0m flag ON but tools/list returns %s (expected 7)\n" "$count"
+        printf "  \033[31m✗\033[0m flag ON but %s core/documents tool(s) missing from tools/list\n" "$names"
         fail=$((fail+1))
       fi
     else
