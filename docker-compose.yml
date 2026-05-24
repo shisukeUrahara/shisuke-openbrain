@@ -205,6 +205,36 @@ services:
         condition: service_healthy
     restart: unless-stopped
 
+  # ────────────────────────────────────────────────────────────
+  # Optional module: image ingestion worker (Phase 12.e)
+  # ────────────────────────────────────────────────────────────
+  worker-image:
+    build:
+      context: ./services/workers/image
+      dockerfile: Dockerfile
+    container_name: openbrain-worker-image
+    profiles: [image]
+    environment:
+      MODULE_WORKERS_IMAGE_ENABLED: ${MODULE_WORKERS_IMAGE_ENABLED:-false}
+      BRAIN_URL: ${BRAIN_URL:-http://mcp-server:8080/mcp?key=${BRAIN_KEY:-}}
+      REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
+      # OpenRouter key required at runtime when the flag is on, since
+      # the worker offloads OCR + description to a vision model.
+      OPENROUTER_API_KEY:          ${OPENROUTER_API_KEY:-}
+      WORKER_QUEUE:                ${WORKER_QUEUE_IMAGE:-ingest:image}
+      WORKER_VISION_MODEL:         ${WORKER_VISION_MODEL:-qwen/qwen-2.5-vl-7b-instruct}
+      WORKER_MAX_IMAGE_BYTES:      ${WORKER_MAX_IMAGE_BYTES:-10485760}
+      WORKER_MAX_CHUNK_TOKENS:     ${WORKER_MAX_CHUNK_TOKENS:-800}
+      WORKER_CHUNK_OVERLAP_TOKENS: ${WORKER_CHUNK_OVERLAP_TOKENS:-120}
+    volumes:
+      - ./config/features.yaml:/app/config/features.yaml:ro
+    depends_on:
+      mcp-server:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
 volumes:
   pg_data:
     name: openbrain_pg_data
