@@ -1,0 +1,12 @@
+# Repo-root pytest config for the cross-service e2e suite.
+#
+# Per-service tests live under services/<name>/tests and are run with
+# that service's own pyproject (testpaths = ["tests"]). The repo-root
+# tests/e2e suite is different in kind: it is black-box, imports nothing
+# from any service, and speaks HTTP to a *running* stack. It needs its
+# own pytest root so the service testpaths don't swallow or shadow it.
+[tool.pytest.ini_options]
+testpaths = ["tests/e2e"]
+markers = [
+  "e2e: black-box tests against a running stack (needs docker compose up + BRAIN_KEY)",
+]
