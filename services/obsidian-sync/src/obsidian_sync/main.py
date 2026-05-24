@@ -86,31 +86,59 @@ async def run(config: Config) -> None:
     vault_dir = Path(config.vault_dir)
     vault_dir.mkdir(parents=True, exist_ok=True)
 
-    # The LISTEN connection and the fetch connection can be the same
-    # asyncpg connection — add_listener callbacks run on the same
-    # connection's event loop.
-    conn = await db.connect(config.database_url)
-
     stop = asyncio.Event()
     loop = asyncio.get_running_loop()
     for sig in (signal.SIGINT, signal.SIGTERM):
         loop.add_signal_handler(sig, stop.set)
 
-    if config.backfill_on_start:
-        await backfill(conn, vault_dir)
+    # A bare LISTEN connection that sits idle eventually stops
+    # delivering notifications (TCP idle drop, server-side timeout,
+    # or asyncpg's reader stalling). asyncpg does NOT auto-reconnect.
+    # So we run a supervised loop: connect, backfill any gap, LISTEN,
+    # then poll a cheap keepalive every KEEPALIVE_S. If the keepalive
+    # raises, the connection is dead — we reconnect, which re-runs the
+    # backfill sweep to catch anything missed while we were down.
+    keepalive_s = 30
+    backfill_done_once = False
 
-    def _on_notify(_conn, _pid, _channel, payload):  # asyncpg callback signature
-        # Schedule the async handler; the callback itself is sync.
-        asyncio.create_task(handle_notification(conn, vault_dir, payload))
+    while not stop.is_set():
+        conn = None
+        try:
+            conn = await db.connect(config.database_url)
 
-    await conn.add_listener("new_document", _on_notify)
-    logger.info("listening on new_document, vault=%s", vault_dir)
+            # Backfill on first connect (if enabled) and after every
+            # reconnect — the sweep is overwrite=false so it is cheap
+            # when nothing is missing.
+            if config.backfill_on_start or backfill_done_once:
+                await backfill(conn, vault_dir)
+            backfill_done_once = True
 
-    try:
-        await stop.wait()
-    finally:
-        await conn.remove_listener("new_document", _on_notify)
-        await conn.close()
+            def _on_notify(_conn, _pid, _channel, payload):
+                asyncio.create_task(handle_notification(conn, vault_dir, payload))
+
+            await conn.add_listener("new_document", _on_notify)
+            logger.info("listening on new_document, vault=%s", vault_dir)
+
+            # Keepalive loop — also our liveness probe for the
+            # LISTEN connection.
+            while not stop.is_set():
+                try:
+                    await asyncio.wait_for(stop.wait(), timeout=keepalive_s)
+                except asyncio.TimeoutError:
+                    pass  # normal: time to send a keepalive
+                if stop.is_set():
+                    break
+                await conn.execute("SELECT 1")  # raises if the conn died
+
+        except (asyncpg.PostgresError, OSError) as exc:
+            logger.warning("listen connection lost (%s); reconnecting in 5s", exc)
+            await asyncio.sleep(5)
+        finally:
+            if conn is not None:
+                try:
+                    await conn.close()
+                except Exception:
+                    pass
 
 
 async def _idle_forever() -> None:

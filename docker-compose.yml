@@ -235,8 +235,56 @@ services:
         condition: service_healthy
     restart: unless-stopped
 
+  # ────────────────────────────────────────────────────────────
+  # Optional module: obsidian vault mirror (Phase 13)
+  # ────────────────────────────────────────────────────────────
+  obsidian-sync:
+    build:
+      context: ./services/obsidian-sync
+      dockerfile: Dockerfile
+    container_name: openbrain-obsidian-sync
+    profiles: [obsidian]
+    environment:
+      MODULE_OBSIDIAN_MIRROR_ENABLED: ${MODULE_OBSIDIAN_MIRROR_ENABLED:-false}
+      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-devpass}@postgres:5432/${POSTGRES_DB:-openbrain}
+      VAULT_DIR: /vault
+      VAULT_BACKFILL_ON_START: ${VAULT_BACKFILL_ON_START:-true}
+    volumes:
+      - ./config/features.yaml:/app/config/features.yaml:ro
+      - vault:/vault
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # Git-push sidecar: commits the vault to a remote every 15 min.
+  # Idle no-op unless the obsidian module is enabled AND a remote is
+  # configured (see docs/phase-13-go-live.md). Uses a tiny alpine/git
+  # image; the loop is a plain shell script passed via command.
+  obsidian-git:
+    image: alpine/git:latest
+    container_name: openbrain-obsidian-git
+    profiles: [obsidian]
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        while true; do
+          if [ -d /vault/.git ]; then
+            cd /vault \
+              && git add -A \
+              && (git diff --cached --quiet || git commit -m "auto: vault sync $(date -u +%FT%TZ)") \
+              && (git remote | grep -q origin && git push origin HEAD || true)
+          fi
+          sleep 900
+        done
+    volumes:
+      - vault:/vault
+    restart: unless-stopped
+
 volumes:
   pg_data:
     name: openbrain_pg_data
   whisper_models:
     name: openbrain_whisper_models
+  vault:
+    name: openbrain_vault
