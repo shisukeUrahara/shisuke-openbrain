@@ -1,0 +1,30 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "obsidian-sync"
+version = "0.1.0"
+requires-python = ">=3.12"
+description = "Mirror Open Brain documents to a git-synced Obsidian vault"
+readme = "README.md"
+
+dependencies = [
+  "asyncpg>=0.30",
+  "python-dotenv>=1.0",
+  "pyyaml>=6.0",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8",
+  "pytest-asyncio>=0.24",
+  "pytest-cov>=5",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/obsidian_sync"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
