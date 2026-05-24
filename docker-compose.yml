@@ -50,6 +50,9 @@ services:
       OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
       EMBED_PROVIDER: ${EMBED_PROVIDER:-openrouter}
       OLLAMA_URL: ${OLLAMA_URL:-http://ollama:11434}
+      # Per-IP rate limiting (Phase 9). On by default, 100 req/min/IP.
+      RATE_LIMIT_ENABLED: ${RATE_LIMIT_ENABLED:-true}
+      RATE_LIMIT_PER_MIN: ${RATE_LIMIT_PER_MIN:-100}
       # Module flags propagated through. Default false.
       MODULE_DOCUMENTS_ENABLED:      ${MODULE_DOCUMENTS_ENABLED:-false}
       MODULE_TELEGRAM_BOT_ENABLED:   ${MODULE_TELEGRAM_BOT_ENABLED:-false}
